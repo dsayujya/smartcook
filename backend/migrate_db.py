@@ -30,5 +30,12 @@ def run_migrations():
                 
     print("Database migration completed successfully!")
 
+    # 3. Seed database with initial recipes if empty
+    try:
+        from seed_db import seed
+        seed()
+    except Exception as e:
+        print(f"Seeding notice: {e}")
+
 if __name__ == "__main__":
     run_migrations()
