@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../services/auth_provider.dart';
 import 'ingredient_confirmation_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -43,11 +45,20 @@ class _CameraScreenState extends State<CameraScreen> {
     });
 
     try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.token != null) {
+        _apiService.setAuthToken(auth.token);
+      }
+
       final ingredients = await _apiService.detectIngredients(imageFile);
       
       if (!mounted) return;
       
-      Navigator.pushReplacement(
+      setState(() {
+        _isLoading = false;
+      });
+
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => IngredientConfirmationScreen(
@@ -61,7 +72,7 @@ class _CameraScreenState extends State<CameraScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showError('Could not process image. Please try again.\n$e');
+      _showError('Could not process image: $e');
     }
   }
 

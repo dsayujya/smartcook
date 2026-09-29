@@ -114,16 +114,17 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
               runSpacing: 4,
               children: [
                 ActionChip(
+                  avatar: const Icon(Icons.cloud_done_rounded, size: 16),
+                  label: const Text('Cloud Render (Live)'),
+                  onPressed: () => _applyPreset('https://smartcook-api-y1sk.onrender.com/api'),
+                ),
+                ActionChip(
                   label: const Text('Wi-Fi (192.168.1.14)'),
                   onPressed: () => _applyPreset('http://192.168.1.14:8000/api'),
                 ),
                 ActionChip(
                   label: const Text('Android Emulator (10.0.2.2)'),
                   onPressed: () => _applyPreset('http://10.0.2.2:8000/api'),
-                ),
-                ActionChip(
-                  label: const Text('Localhost (127.0.0.1)'),
-                  onPressed: () => _applyPreset('http://127.0.0.1:8000/api'),
                 ),
               ],
             ),

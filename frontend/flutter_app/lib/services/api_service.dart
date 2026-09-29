@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
@@ -8,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   String? _authToken;
   static const String _prefKey = 'custom_api_base_url';
-  static String customBaseUrl = 'http://192.168.1.14:8000/api';
+  static String customBaseUrl = 'https://smartcook-api-y1sk.onrender.com';
 
   ApiService() {
     initBaseUrl();
@@ -48,12 +49,20 @@ class ApiService {
   }
 
   static String get baseUrl {
+    String url = customBaseUrl.trim();
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    if (!url.endsWith('/api')) {
+      url = '$url/api';
+    }
+
     if (kIsWeb) {
       return customBaseUrl.contains('127.0.0.1') || customBaseUrl.contains('localhost')
           ? 'http://127.0.0.1:8000/api'
-          : customBaseUrl;
+          : url;
     } else {
-      return customBaseUrl;
+      return url;
     }
   }
 
@@ -116,7 +125,7 @@ class ApiService {
               'full_name': fullName,
             }),
           )
-          .timeout(const Duration(seconds: 12));
+          .timeout(const Duration(seconds: 45));
       return _parseResponse(response);
     } catch (e) {
       throw Exception(formatNetworkError(e));
@@ -133,12 +142,9 @@ class ApiService {
           .post(
             uri,
             headers: _headers,
-            body: jsonEncode({
-              'target': target,
-              'otp_type': otpType,
-            }),
+            body: jsonEncode({'target': target, 'otp_type': otpType}),
           )
-          .timeout(const Duration(seconds: 12));
+          .timeout(const Duration(seconds: 45));
       return _parseResponse(response);
     } catch (e) {
       throw Exception(formatNetworkError(e));
@@ -162,7 +168,7 @@ class ApiService {
               'otp_type': otpType,
             }),
           )
-          .timeout(const Duration(seconds: 12));
+          .timeout(const Duration(seconds: 45));
       return _parseResponse(response);
     } catch (e) {
       throw Exception(formatNetworkError(e));
@@ -179,12 +185,9 @@ class ApiService {
           .post(
             uri,
             headers: _headers,
-            body: jsonEncode({
-              'email': email,
-              'password': password,
-            }),
+            body: jsonEncode({'email': email, 'password': password}),
           )
-          .timeout(const Duration(seconds: 12));
+          .timeout(const Duration(seconds: 45));
       return _parseResponse(response);
     } catch (e) {
       throw Exception(formatNetworkError(e));
@@ -195,14 +198,8 @@ class ApiService {
     final uri = Uri.parse('$baseUrl/auth/google');
     try {
       final response = await http
-          .post(
-            uri,
-            headers: _headers,
-            body: jsonEncode({
-              'id_token': idToken,
-            }),
-          )
-          .timeout(const Duration(seconds: 12));
+          .post(uri, headers: _headers, body: jsonEncode({'id_token': idToken}))
+          .timeout(const Duration(seconds: 45));
       return _parseResponse(response);
     } catch (e) {
       throw Exception(formatNetworkError(e));
@@ -212,7 +209,9 @@ class ApiService {
   Future<Map<String, dynamic>> getProfile() async {
     final uri = Uri.parse('$baseUrl/auth/me');
     try {
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 30));
       return _parseResponse(response);
     } catch (e) {
       throw Exception(formatNetworkError(e));
@@ -236,22 +235,26 @@ class ApiService {
   Future<List<Map<String, dynamic>>> detectIngredients(XFile imageFile) async {
     final uri = Uri.parse('$baseUrl/ingredients/detect');
     var request = http.MultipartRequest('POST', uri);
-    
+
     if (_authToken != null) {
       request.headers['Authorization'] = 'Bearer $_authToken';
     }
 
     if (kIsWeb) {
       final bytes = await imageFile.readAsBytes();
-      request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: imageFile.name));
+      request.files.add(
+        http.MultipartFile.fromBytes('image', bytes, filename: imageFile.name),
+      );
     } else {
-      request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path),
+      );
     }
-    
+
     try {
-      var response = await request.send().timeout(const Duration(seconds: 25));
+      var response = await request.send().timeout(const Duration(seconds: 60));
       var responseData = await response.stream.bytesToString();
-      
+
       if (response.statusCode == 200) {
         final decoded = jsonDecode(responseData);
         final ingredientsList = decoded['ingredients'] as List;
@@ -268,13 +271,9 @@ class ApiService {
     final uri = Uri.parse('$baseUrl/ingredients/normalize');
     try {
       final response = await http
-          .post(
-            uri,
-            headers: _headers,
-            body: jsonEncode(rawIngredients),
-          )
-          .timeout(const Duration(seconds: 12));
-      
+          .post(uri, headers: _headers, body: jsonEncode(rawIngredients))
+          .timeout(const Duration(seconds: 30));
+
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final normalized = decoded['normalized_ingredients'] as List;
@@ -304,18 +303,13 @@ class ApiService {
       queryParams['max_cooking_time'] = maxCookTime.toString();
     }
 
-    final uri = Uri.parse('$baseUrl/recipes/recommend').replace(
-      queryParameters: queryParams.isNotEmpty ? queryParams : null,
-    );
-    
+    final uri = Uri.parse('$baseUrl/recipes/recommend')
+        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
     try {
       final response = await http
-          .post(
-            uri,
-            headers: _headers,
-            body: jsonEncode(ingredients),
-          )
-          .timeout(const Duration(seconds: 15));
+          .post(uri, headers: _headers, body: jsonEncode(ingredients))
+          .timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -330,7 +324,9 @@ class ApiService {
   Future<Map<String, dynamic>> getRecipeDetails(int recipeId) async {
     final uri = Uri.parse('$baseUrl/recipes/$recipeId');
     try {
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -341,14 +337,19 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> searchYouTube(String recipeName, List<String> ingredients) async {
+  Future<List<dynamic>> searchYouTube(
+    String recipeName,
+    List<String> ingredients,
+  ) async {
     final queryParams = ['recipe_name=${Uri.encodeComponent(recipeName)}'];
     for (var ing in ingredients) {
       queryParams.add('ingredients=${Uri.encodeComponent(ing)}');
     }
     final uri = Uri.parse('$baseUrl/youtube/search?${queryParams.join('&')}');
     try {
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {

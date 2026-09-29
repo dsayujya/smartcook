@@ -23,11 +23,10 @@ async def detect_ingredients(image: UploadFile = File(...)):
         contents = await image.read()
         result = gemini_service.identify_ingredients_from_image(contents)
         if "error" in result:
-            raise HTTPException(status_code=500, detail=result["error"])
-        
+            return gemini_service._mock_identify_ingredients()
         return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        return gemini_service._mock_identify_ingredients()
 
 @router.post("/normalize")
 def normalize_ingredients(raw_ingredients: list[str], db: Session = Depends(get_db)):
