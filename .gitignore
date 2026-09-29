@@ -1,0 +1,29 @@
+# Environment & Secrets
+.env
+*.env
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Large Datasets (Optional - if over 50MB)
+Cleaned_Indian_Food_Dataset.csv
+
+# Flutter & Dart
+**/build/
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.vscode/
+.idea/
+*.swp
