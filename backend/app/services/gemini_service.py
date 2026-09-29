@@ -10,58 +10,61 @@ except ImportError:
 class GeminiService:
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.model = None
         if self.api_key and genai:
             genai.configure(api_key=self.api_key)
-            # Try multiple model options in case one has quota restrictions
-            for model_name in ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash']:
-                try:
-                    self.model = genai.GenerativeModel(model_name)
-                    break
-                except Exception:
-                    continue
-        if not self.model:
-            logging.warning("Gemini API key not provided, model unavailable, or genai not installed. Using mock mode.")
+            self.has_key = True
+        else:
+            self.has_key = False
+            logging.warning("Gemini API key not provided or genai not installed. Using mock mode.")
 
     def identify_ingredients_from_image(self, image_bytes: bytes) -> Dict[str, Any]:
         """
         Takes image bytes and returns a structured JSON-like dict of ingredients and confidences.
-        Falls back gracefully to mock data if Gemini API fails (e.g. quota 429, network error).
+        Iterates over active Gemini models to bypass per-model quota limits (e.g. 429 20 RPD limits).
+        Falls back gracefully to mock data if all Gemini models fail.
         """
-        if not self.model:
+        if not self.has_key:
             return self._mock_identify_ingredients()
-            
-        try:
-            prompt = """
-            Analyze this image and identify the visible food ingredients.
-            Return a JSON object with a single key 'ingredients'. The value should be a list of objects, 
-            where each object has 'name' (string) and 'confidence' (float between 0 and 1).
-            Only output valid JSON.
-            """
-            
-            image_part = {
-                "mime_type": "image/jpeg",
-                "data": image_bytes
-            }
-            
-            response = self.model.generate_content([prompt, image_part])
-            
-            # Attempt to parse JSON from response
-            text_response = response.text
-            if "```json" in text_response:
-                text_response = text_response.split("```json")[1].split("```")[0].strip()
-            elif "```" in text_response:
-                text_response = text_response.split("```")[1].split("```")[0].strip()
+
+        candidate_models = [
+            'gemini-2.5-flash',
+            'gemini-1.5-flash',
+            'gemini-2.0-flash',
+            'gemini-2.5-flash-lite',
+        ]
+
+        prompt = """
+        Analyze this image and identify the visible food ingredients.
+        Return a JSON object with a single key 'ingredients'. The value should be a list of objects, 
+        where each object has 'name' (string) and 'confidence' (float between 0 and 1).
+        Only output valid JSON.
+        """
+
+        image_part = {
+            "mime_type": "image/jpeg",
+            "data": image_bytes
+        }
+
+        for model_name in candidate_models:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content([prompt, image_part])
                 
-            parsed = json.loads(text_response)
-            if "ingredients" in parsed and isinstance(parsed["ingredients"], list) and len(parsed["ingredients"]) > 0:
-                return parsed
-            else:
-                logging.warning("Gemini returned JSON without valid ingredients. Falling back to mock data.")
-                return self._mock_identify_ingredients()
-        except Exception as e:
-            logging.error(f"Error calling Gemini API: {e}. Falling back to mock detection.")
-            return self._mock_identify_ingredients()
+                text_response = response.text
+                if "```json" in text_response:
+                    text_response = text_response.split("```json")[1].split("```")[0].strip()
+                elif "```" in text_response:
+                    text_response = text_response.split("```")[1].split("```")[0].strip()
+                    
+                parsed = json.loads(text_response)
+                if "ingredients" in parsed and isinstance(parsed["ingredients"], list) and len(parsed["ingredients"]) > 0:
+                    logging.info(f"Successfully identified ingredients using model {model_name}")
+                    return parsed
+            except Exception as e:
+                logging.warning(f"Model {model_name} failed or rate limited: {e}. Trying next model...")
+
+        logging.error("All Gemini models failed or exceeded quota limits. Falling back to mock detection.")
+        return self._mock_identify_ingredients()
 
     def _mock_identify_ingredients(self) -> Dict[str, Any]:
         """
@@ -77,4 +80,5 @@ class GeminiService:
                 {"name": "olive oil", "confidence": 0.82}
             ]
         }
+
 
