@@ -177,28 +177,63 @@ class _IngredientConfirmationScreenState extends State<IngredientConfirmationScr
 
               // Ingredient List
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _ingredients.length,
-                  itemBuilder: (context, index) {
-                    return Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: colorScheme.primaryContainer,
-                          child: Icon(Icons.eco_rounded, color: colorScheme.onPrimaryContainer, size: 20),
+                child: _ingredients.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.search_off_rounded, size: 48, color: colorScheme.primary),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No Ingredients Detected',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Add ingredients manually using the box below, or go back to capture another photo.',
+                                textAlign: TextAlign.center,
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.outline,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        title: Text(
-                          _ingredients[index].toUpperCase(),
-                          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        trailing: IconButton(
-                          icon: Icon(Icons.remove_circle_outline_rounded, color: colorScheme.error),
-                          onPressed: () => _removeIngredient(index),
-                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _ingredients.length,
+                        itemBuilder: (context, index) {
+                          return Card(
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: colorScheme.primaryContainer,
+                                child: Icon(Icons.eco_rounded, color: colorScheme.onPrimaryContainer, size: 20),
+                              ),
+                              title: Text(
+                                _ingredients[index].toUpperCase(),
+                                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              trailing: IconButton(
+                                icon: Icon(Icons.remove_circle_outline_rounded, color: colorScheme.error),
+                                onPressed: () => _removeIngredient(index),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
 
               // Bottom Panel

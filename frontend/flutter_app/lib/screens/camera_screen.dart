@@ -72,15 +72,33 @@ class _CameraScreenState extends State<CameraScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showError('Could not process image: $e');
+      _showError('Could not process image: $e', imageFile: imageFile);
     }
   }
 
-  void _showError(String message) {
+  void _showError(String message, {XFile? imageFile}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Theme.of(context).colorScheme.error,
+        duration: const Duration(seconds: 5),
+        action: imageFile != null
+            ? SnackBarAction(
+                label: 'Add Manually',
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => IngredientConfirmationScreen(
+                        detectedIngredients: const [],
+                        imagePath: imageFile.path,
+                      ),
+                    ),
+                  );
+                },
+              )
+            : null,
       ),
     );
   }

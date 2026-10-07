@@ -19,14 +19,22 @@ async def detect_ingredients(image: UploadFile = File(...)):
     if not is_image_content and not is_image_ext:
         raise HTTPException(status_code=400, detail="File must be an image")
         
+    mime_type = image.content_type if (image.content_type and image.content_type.startswith("image/")) else "image/jpeg"
+
     try:
         contents = await image.read()
-        result = gemini_service.identify_ingredients_from_image(contents)
-        if "error" in result:
-            return gemini_service._mock_identify_ingredients()
+        result = gemini_service.identify_ingredients_from_image(contents, mime_type=mime_type)
         return result
-    except Exception:
-        return gemini_service._mock_identify_ingredients()
+    except HTTPException:
+        raise
+    except Exception as e:
+        if not gemini_service.has_key:
+            return gemini_service._mock_identify_ingredients()
+        raise HTTPException(
+            status_code=503, 
+            detail=f"Ingredient detection service is temporarily unavailable: {str(e)}"
+        )
+
 
 @router.post("/normalize")
 def normalize_ingredients(raw_ingredients: list[str], db: Session = Depends(get_db)):

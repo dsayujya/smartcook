@@ -260,7 +260,15 @@ class ApiService {
         final ingredientsList = decoded['ingredients'] as List;
         return List<Map<String, dynamic>>.from(ingredientsList);
       } else {
-        throw Exception('Failed to detect ingredients: ${response.statusCode}');
+        try {
+          final errJson = jsonDecode(responseData);
+          if (errJson is Map && errJson.containsKey('detail')) {
+            throw Exception(errJson['detail']);
+          }
+        } on FormatException {
+          // not json
+        }
+        throw Exception('Failed to detect ingredients (${response.statusCode})');
       }
     } catch (e) {
       throw Exception(formatNetworkError(e));
