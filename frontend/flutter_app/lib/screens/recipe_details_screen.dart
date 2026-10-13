@@ -6,12 +6,18 @@ class RecipeDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> recipe;
   final int matchPercentage;
   final List<dynamic> missingIngredients;
+  final List<dynamic>? missingCoreIngredients;
+  final List<dynamic>? usedIngredients;
+  final bool assumePantryStaples;
 
   const RecipeDetailsScreen({
     super.key,
     required this.recipe,
     required this.matchPercentage,
     required this.missingIngredients,
+    this.missingCoreIngredients,
+    this.usedIngredients,
+    this.assumePantryStaples = true,
   });
 
   @override
@@ -143,40 +149,8 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                   ),
                   const SizedBox(height: 24),
                   
-                  // Ingredients Section
-                  Text('Ingredients Needed', style: textTheme.titleLarge),
-                  const SizedBox(height: 12),
-                  ...List.generate(
-                    (widget.recipe['ingredients'] as List).length,
-                    (index) {
-                      final item = widget.recipe['ingredients'][index];
-                      final ingredientName = item['ingredient']['name'];
-                      final isMissing = widget.missingIngredients.contains(ingredientName.toString().toLowerCase());
-                      
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6.0),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isMissing ? Icons.cancel_outlined : Icons.check_circle_rounded,
-                              color: isMissing ? colorScheme.error : colorScheme.primary,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                '${item['quantity'] ?? ''} ${item['unit'] ?? ''} ${ingredientName.toString().toUpperCase()}',
-                                style: textTheme.bodyLarge?.copyWith(
-                                  color: isMissing ? colorScheme.error : colorScheme.onSurface,
-                                  fontWeight: isMissing ? FontWeight.w600 : FontWeight.normal,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                  // Categorized Ingredients Section
+                  _buildCategorizedIngredients(context, colorScheme, textTheme),
                   
                   const SizedBox(height: 32),
                   
@@ -272,4 +246,188 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
       ),
     );
   }
+
+  static const Set<String> _pantryKeywords = {
+    'salt', 'oil', 'water', 'turmeric', 'haldi', 'chilli powder', 'pepper', 'cumin', 'jeera',
+    'coriander powder', 'dhania powder', 'garam masala', 'mustard', 'rai', 'sarson',
+    'asafoetida', 'hing', 'curry leaves', 'ginger', 'garlic', 'green chilli', 'lemon',
+    'ghee', 'butter', 'sugar', 'jaggery', 'cloves', 'cinnamon', 'cardamom', 'bay leaf',
+    'kasuri methi', 'amchur', 'chaat masala', 'baking', 'vinegar', 'oregano'
+  };
+
+  bool _isPantryItem(String name) {
+    final lower = name.toLowerCase();
+    return _pantryKeywords.any((k) => lower.contains(k));
+  }
+
+  Widget _buildCategorizedIngredients(BuildContext context, ColorScheme colorScheme, TextTheme textTheme) {
+    final allIngredients = (widget.recipe['ingredients'] as List);
+    final coreItems = widget.assumePantryStaples
+        ? allIngredients.where((i) => !_isPantryItem(i['ingredient']['name'].toString())).toList()
+        : allIngredients;
+    final pantryItems = widget.assumePantryStaples
+        ? allIngredients.where((i) => _isPantryItem(i['ingredient']['name'].toString())).toList()
+        : [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Core / Main Ingredients Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Main Ingredients', style: textTheme.titleLarge),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${coreItems.length} items',
+                style: textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        ...coreItems.map((item) {
+          final ingredientName = item['ingredient']['name'].toString();
+          final isMissing = widget.missingIngredients.contains(ingredientName.toLowerCase()) ||
+              (widget.missingCoreIngredients != null &&
+                  widget.missingCoreIngredients!.any((m) => m.toString().toLowerCase() == ingredientName.toLowerCase()));
+
+          return _buildIngredientRow(
+            item: item,
+            name: ingredientName,
+            isMissing: isMissing,
+            isPantry: false,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+          );
+        }),
+
+        if (pantryItems.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Pantry Staples & Spices', style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Assumed available in kitchen',
+                    style: textTheme.bodySmall?.copyWith(color: colorScheme.outline),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${pantryItems.length} items',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          ...pantryItems.map((item) {
+            final ingredientName = item['ingredient']['name'].toString();
+            return _buildIngredientRow(
+              item: item,
+              name: ingredientName,
+              isMissing: false,
+              isPantry: true,
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            );
+          }),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildIngredientRow({
+    required dynamic item,
+    required String name,
+    required bool isMissing,
+    required bool isPantry,
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        children: [
+          Icon(
+            isPantry
+                ? Icons.kitchen_rounded
+                : isMissing
+                    ? Icons.cancel_outlined
+                    : Icons.check_circle_rounded,
+            color: isPantry
+                ? colorScheme.primary
+                : isMissing
+                    ? colorScheme.error
+                    : Colors.green.shade700,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '${item['quantity'] ?? ''} ${item['unit'] ?? ''} ${name.toUpperCase()}',
+              style: textTheme.bodyLarge?.copyWith(
+                color: isMissing ? colorScheme.error : colorScheme.onSurface,
+                fontWeight: isMissing ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ),
+          if (isMissing)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'MISSING',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onErrorContainer,
+                ),
+              ),
+            )
+          else if (isPantry)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'PANTRY',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.outline,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
+

@@ -93,6 +93,9 @@ class RecipeRecommendation(BaseModel):
     match_percentage: float
     missing_ingredients: List[str]
     score: float
+    used_ingredients: List[str] = []
+    missing_core_ingredients: List[str] = []
+    missing_pantry_ingredients: List[str] = []
 
 class RecipeFilterParams(BaseModel):
     cuisine: Optional[str] = None       # e.g. "Indian", "Italian", "Continental"

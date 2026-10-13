@@ -29,6 +29,8 @@ class _IngredientConfirmationScreenState extends State<IngredientConfirmationScr
   String? _selectedCuisine;
   String? _selectedMealType;
   int? _selectedMaxTime;
+  bool _assumePantryStaples = true;
+  String _rankingMode = 'basket_use';
 
   static const List<String> _cuisineOptions = [
     'Indian', 'Continental', 'Italian', 'South Indian',
@@ -46,6 +48,11 @@ class _IngredientConfirmationScreenState extends State<IngredientConfirmationScr
     {'label': '🕐 Fast (≤30 min)', 'value': 30},
     {'label': '🕑 Medium (≤60 min)', 'value': 60},
     {'label': '🍳 Slow Cook (60+ min)', 'value': 120},
+  ];
+
+  static const List<Map<String, dynamic>> _rankingModeOptions = [
+    {'label': '🎯 Maximize Basket Use', 'value': 'basket_use'},
+    {'label': '🍳 Ready to Cook (0 Missing)', 'value': 'ready_to_cook'},
   ];
 
   @override
@@ -81,6 +88,8 @@ class _IngredientConfirmationScreenState extends State<IngredientConfirmationScr
     if (_selectedCuisine != null) count++;
     if (_selectedMealType != null) count++;
     if (_selectedMaxTime != null) count++;
+    if (!_assumePantryStaples) count++;
+    if (_rankingMode != 'basket_use') count++;
     return count;
   }
 
@@ -108,6 +117,8 @@ class _IngredientConfirmationScreenState extends State<IngredientConfirmationScr
             cuisine: _selectedCuisine,
             mealType: _selectedMealType,
             maxCookTime: _selectedMaxTime,
+            assumePantryStaples: _assumePantryStaples,
+            rankingMode: _rankingMode,
           ),
         ),
       );
@@ -307,6 +318,61 @@ class _IngredientConfirmationScreenState extends State<IngredientConfirmationScr
                       // Filter Chips
                       if (_showFilters) ...[
                         const SizedBox(height: 16),
+                        _buildFilterSection(
+                          'Recommendation Priority',
+                          Icons.tune_rounded,
+                          _rankingModeOptions.map((r) => _buildChip(
+                            r['label'],
+                            isSelected: _rankingMode == r['value'],
+                            onTap: () => setState(() {
+                              _rankingMode = r['value'];
+                            }),
+                            colorScheme: colorScheme,
+                          )).toList(),
+                          colorScheme: colorScheme,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.kitchen_rounded, size: 20, color: colorScheme.primary),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Assume Pantry Staples',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Salt, cooking oil, common spices/turmeric',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: colorScheme.outline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch.adaptive(
+                                value: _assumePantryStaples,
+                                activeTrackColor: colorScheme.primary,
+                                onChanged: (val) => setState(() => _assumePantryStaples = val),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         _buildFilterSection(
                           'Cuisine',
                           Icons.public_rounded,

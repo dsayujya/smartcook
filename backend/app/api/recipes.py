@@ -14,11 +14,15 @@ def recommend_recipes(
     cuisine: Optional[str] = Query(None, description="Filter by cuisine (e.g. 'Indian', 'Italian')"),
     meal_type: Optional[str] = Query(None, description="Filter by meal type: 'sweet' or 'savoury'"),
     max_cooking_time: Optional[int] = Query(None, description="Max cooking time in minutes"),
+    assume_pantry_staples: bool = Query(True, description="Assume basic kitchen staples like salt, oil, common spices are available"),
+    ranking_mode: str = Query("basket_use", description="Ranking strategy: 'basket_use' or 'ready_to_cook'"),
+    limit: int = Query(20, description="Max recipes to return"),
     db: Session = Depends(get_db)
 ):
     """
     Takes a confirmed list of ingredients and recommends recipes.
-    Supports optional filters for cuisine, meal type, and max cooking time.
+    Supports optional filters for cuisine, meal type, max cooking time,
+    pantry staple assumption toggle, and ranking modes.
     """
     engine = RecommendationEngine(db)
     
@@ -35,7 +39,14 @@ def recommend_recipes(
     if max_cooking_time:
         filters['max_cook_time'] = max_cooking_time
         
-    recommendations = engine.rank_recipes(ingredients, preferences, filters if filters else None)
+    recommendations = engine.rank_recipes(
+        available_ingredients=ingredients,
+        user_preferences=preferences,
+        filters=filters if filters else None,
+        assume_pantry_staples=assume_pantry_staples,
+        ranking_mode=ranking_mode,
+        limit=limit
+    )
     return recommendations
 
 @router.get("/{recipe_id}", response_model=RecipeSchema)

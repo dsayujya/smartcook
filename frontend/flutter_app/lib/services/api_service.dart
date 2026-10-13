@@ -299,6 +299,8 @@ class ApiService {
     String? cuisine,
     String? mealType,
     int? maxCookTime,
+    bool assumePantryStaples = true,
+    String rankingMode = 'basket_use',
   }) async {
     final queryParams = <String, String>{};
     if (cuisine != null && cuisine.isNotEmpty) {
@@ -310,6 +312,8 @@ class ApiService {
     if (maxCookTime != null) {
       queryParams['max_cooking_time'] = maxCookTime.toString();
     }
+    queryParams['assume_pantry_staples'] = assumePantryStaples.toString();
+    queryParams['ranking_mode'] = rankingMode;
 
     final uri = Uri.parse('$baseUrl/recipes/recommend')
         .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
