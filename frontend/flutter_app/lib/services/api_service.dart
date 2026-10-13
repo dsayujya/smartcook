@@ -329,7 +329,7 @@ class ApiService {
     try {
       final response = await http
           .post(uri, headers: _headers, body: jsonEncode(ingredients))
-          .timeout(const Duration(seconds: 45));
+          .timeout(const Duration(seconds: 90));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);

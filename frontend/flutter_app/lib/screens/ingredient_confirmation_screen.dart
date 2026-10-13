@@ -317,102 +317,116 @@ class _IngredientConfirmationScreenState extends State<IngredientConfirmationScr
 
                       // Filter Chips
                       if (_showFilters) ...[
-                        const SizedBox(height: 16),
-                        _buildFilterSection(
-                          'Recommendation Priority',
-                          Icons.tune_rounded,
-                          _rankingModeOptions.map((r) => _buildChip(
-                            r['label'],
-                            isSelected: _rankingMode == r['value'],
-                            onTap: () => setState(() {
-                              _rankingMode = r['value'];
-                            }),
-                            colorScheme: colorScheme,
-                          )).toList(),
-                          colorScheme: colorScheme,
-                        ),
                         const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(16),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: MediaQuery.of(context).size.height * 0.35,
                           ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.kitchen_rounded, size: 20, color: colorScheme.primary),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Assume Pantry Staples',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: colorScheme.onSurface,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Salt, cooking oil, common spices/turmeric',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: colorScheme.outline,
-                                      ),
-                                    ),
-                                  ],
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildFilterSection(
+                                  'Recommendation Priority',
+                                  Icons.tune_rounded,
+                                  _rankingModeOptions.map((r) => _buildChip(
+                                    r['label'],
+                                    isSelected: _rankingMode == r['value'],
+                                    onTap: () => setState(() {
+                                      _rankingMode = r['value'];
+                                    }),
+                                    colorScheme: colorScheme,
+                                  )).toList(),
+                                  colorScheme: colorScheme,
                                 ),
-                              ),
-                              Switch.adaptive(
-                                value: _assumePantryStaples,
-                                activeTrackColor: colorScheme.primary,
-                                onChanged: (val) => setState(() => _assumePantryStaples = val),
-                              ),
-                            ],
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.kitchen_rounded, size: 20, color: colorScheme.primary),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Assume Pantry Staples',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: colorScheme.onSurface,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Salt, cooking oil, common spices/turmeric',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: colorScheme.outline,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Switch.adaptive(
+                                        value: _assumePantryStaples,
+                                        activeTrackColor: colorScheme.primary,
+                                        onChanged: (val) => setState(() => _assumePantryStaples = val),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                _buildFilterSection(
+                                  'Cuisine',
+                                  Icons.public_rounded,
+                                  _cuisineOptions.map((c) => _buildChip(
+                                    c,
+                                    isSelected: _selectedCuisine == c,
+                                    onTap: () => setState(() {
+                                      _selectedCuisine = _selectedCuisine == c ? null : c;
+                                    }),
+                                    colorScheme: colorScheme,
+                                  )).toList(),
+                                  colorScheme: colorScheme,
+                                ),
+                                const SizedBox(height: 12),
+                                _buildFilterSection(
+                                  'Meal Type',
+                                  Icons.set_meal_rounded,
+                                  _mealTypeOptions.map((m) => _buildChip(
+                                    m['label'],
+                                    isSelected: _selectedMealType == m['value'],
+                                    onTap: () => setState(() {
+                                      _selectedMealType = _selectedMealType == m['value'] ? null : m['value'];
+                                    }),
+                                    colorScheme: colorScheme,
+                                  )).toList(),
+                                  colorScheme: colorScheme,
+                                ),
+                                const SizedBox(height: 12),
+                                _buildFilterSection(
+                                  'Max Cooking Time',
+                                  Icons.timer_outlined,
+                                  _timeOptions.map((t) => _buildChip(
+                                    t['label'],
+                                    isSelected: _selectedMaxTime == t['value'],
+                                    onTap: () => setState(() {
+                                      _selectedMaxTime = _selectedMaxTime == t['value'] ? null : t['value'];
+                                    }),
+                                    colorScheme: colorScheme,
+                                  )).toList(),
+                                  colorScheme: colorScheme,
+                                ),
+                                const SizedBox(height: 4),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildFilterSection(
-                          'Cuisine',
-                          Icons.public_rounded,
-                          _cuisineOptions.map((c) => _buildChip(
-                            c,
-                            isSelected: _selectedCuisine == c,
-                            onTap: () => setState(() {
-                              _selectedCuisine = _selectedCuisine == c ? null : c;
-                            }),
-                            colorScheme: colorScheme,
-                          )).toList(),
-                          colorScheme: colorScheme,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildFilterSection(
-                          'Meal Type',
-                          Icons.set_meal_rounded,
-                          _mealTypeOptions.map((m) => _buildChip(
-                            m['label'],
-                            isSelected: _selectedMealType == m['value'],
-                            onTap: () => setState(() {
-                              _selectedMealType = _selectedMealType == m['value'] ? null : m['value'];
-                            }),
-                            colorScheme: colorScheme,
-                          )).toList(),
-                          colorScheme: colorScheme,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildFilterSection(
-                          'Max Cooking Time',
-                          Icons.timer_outlined,
-                          _timeOptions.map((t) => _buildChip(
-                            t['label'],
-                            isSelected: _selectedMaxTime == t['value'],
-                            onTap: () => setState(() {
-                              _selectedMaxTime = _selectedMaxTime == t['value'] ? null : t['value'];
-                            }),
-                            colorScheme: colorScheme,
-                          )).toList(),
-                          colorScheme: colorScheme,
                         ),
                       ],
 
@@ -486,9 +500,10 @@ class _IngredientConfirmationScreenState extends State<IngredientConfirmationScr
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 38,
+          height: 42,
           child: ListView(
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
             children: chips,
           ),
         ),
