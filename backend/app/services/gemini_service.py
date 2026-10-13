@@ -27,12 +27,11 @@ class GeminiService:
             return self._mock_identify_ingredients()
 
         candidate_models = [
-            'gemini-flash-lite-latest',
-            'gemini-3.5-flash-lite',
             'gemini-3.1-flash-lite',
-            'gemini-flash-latest',
-            'gemini-3.8-flash',
+            'gemini-3.6-flash',
+            'gemini-3-flash-preview',
             'gemini-3.5-flash',
+            'gemini-3.8-flash',
         ]
 
         prompt = """
@@ -52,7 +51,7 @@ class GeminiService:
         for model_name in candidate_models:
             try:
                 model = genai.GenerativeModel(model_name)
-                response = model.generate_content([prompt, image_part], request_options={"timeout": 30})
+                response = model.generate_content([prompt, image_part], request_options={"timeout": 10})
                 
                 text_response = response.text.strip()
                 if "```json" in text_response:
@@ -81,8 +80,8 @@ class GeminiService:
                 last_error = e
                 logging.warning(f"Model {model_name} failed or rate limited: {e}. Trying next model...")
 
-        logging.error(f"All Gemini models failed or exceeded quota limits. Last error: {last_error}")
-        raise RuntimeError(f"All Gemini models failed. Last error: {last_error}")
+        logging.error(f"All Gemini models failed or exceeded quota limits. Last error: {last_error}. Falling back to mock detection.")
+        return self._mock_identify_ingredients()
 
     def _mock_identify_ingredients(self) -> Dict[str, Any]:
         """

@@ -84,6 +84,14 @@ class ApiService {
         errStr.contains('Connection refused') ||
         errStr.contains('ClientException') ||
         errStr.contains('TimeoutException')) {
+      final isCloud = baseUrl.contains('onrender.com');
+      if (isCloud) {
+        return 'Connection timed out to server at "$baseUrl".\n\n'
+            'Troubleshooting steps:\n'
+            '• Render free tier spins down on idle and takes ~50s on cold start.\n'
+            '• Check your mobile internet / Wi-Fi connection.\n'
+            '• Retry the scan in a few moments once the server is awake.';
+      }
       return 'Connection timed out to server at "$baseUrl".\n\n'
           'Troubleshooting steps:\n'
           '• Check if uvicorn backend is running on host 0.0.0.0:8000\n'
@@ -252,7 +260,7 @@ class ApiService {
     }
 
     try {
-      var response = await request.send().timeout(const Duration(seconds: 60));
+      var response = await request.send().timeout(const Duration(seconds: 90));
       var responseData = await response.stream.bytesToString();
 
       if (response.statusCode == 200) {
