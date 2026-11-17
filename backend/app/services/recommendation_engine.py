@@ -34,13 +34,14 @@ PANTRY_STAPLES: Set[str] = {
     
     # Oils & Cooking Fats
     "oil", "cooking oil", "vegetable oil", "sunflower oil", "olive oil", "mustard oil",
-    "sesame oil", "canola oil", "peanut oil", "ghee", "butter", "cooking spray",
+    "sesame oil", "canola oil", "peanut oil", "ghee", "butter", "cooking spray", "salt oil",
     
     # Core Ground & Whole Spices
     "turmeric", "turmeric powder", "haldi",
     "red chilli powder", "chilli powder", "degi mirch", "kashmiri chilli powder", "kashmiri red chilli powder",
     "paprika", "red chilli flakes", "chilli flakes", "cayenne pepper",
     "black pepper", "black pepper powder", "black peppercorns", "white pepper powder", "peppercorns",
+    "pepper powder", "white pepper",
     "cumin", "cumin seeds", "cumin powder", "jeera", "shahi jeera",
     "coriander powder", "dhania powder",
     "garam masala", "garam masala powder", "kitchen king masala", "sabzi masala",
@@ -69,7 +70,11 @@ PANTRY_STAPLES: Set[str] = {
     "oregano", "mixed herbs", "italian seasoning", "rosemary", "thyme", "basil",
     "sugar", "jaggery", "honey",
     "baking soda", "baking powder", "yeast",
-    "vanilla extract", "vinegar", "soy sauce"
+    "vanilla extract", "vinegar", "chilli vinegar", "white vinegar",
+    "soy sauce", "dark soy sauce", "light soy sauce",
+    "red chilli sauce", "green chilli sauce", "chilli sauce", "chili sauce", "hot sauce",
+    "schezwan sauce", "tomato ketchup", "tomato sauce", "ketchup",
+    "ajinomoto", "msg"
 }
 
 # ==============================================================================
@@ -163,9 +168,16 @@ def get_synonyms(term: str) -> Set[str]:
     return SYNONYM_LOOKUP.get(term_lower, {term_lower})
 
 
+def clean_ingredient_name(name: str) -> str:
+    """Strips common measurement and scraping artifacts like 'spoon', 'packet', 'stalks'."""
+    lower = name.lower().strip()
+    cleaned = re.sub(r'\b(spoon|spoons|packet|packets|stalks|stalk|leaves|bulb|greens|tbsp|tsp|cup|cups|drop|drops)\b', '', lower)
+    return re.sub(r'\s+', ' ', cleaned).strip(' -,')
+
+
 def is_pantry_ingredient(name: str) -> bool:
     """Check if an ingredient name is classified as a pantry staple/seasoning."""
-    lower = name.lower().strip()
+    lower = clean_ingredient_name(name)
     for p in PANTRY_STAPLES:
         if re.search(r'\b' + re.escape(p) + r'\b', lower):
             return True
@@ -178,20 +190,20 @@ def matches_ingredient(avail_ing: str, recipe_ing: str) -> bool:
     Prevents false substrings (e.g. 'oil' in 'boiled', 'corn' in 'peppercorns').
     """
     avail_terms = get_synonyms(avail_ing)
-    rec_lower = recipe_ing.lower().strip()
+    rec_clean = clean_ingredient_name(recipe_ing)
     
     for term in avail_terms:
         # Whole word match
-        if re.search(r'\b' + re.escape(term) + r'\b', rec_lower):
+        if re.search(r'\b' + re.escape(term) + r'\b', rec_clean):
             return True
         # Basic morphological plural/singular check
         if term.endswith('s') and len(term) > 3:
             stem = term[:-1]
-            if re.search(r'\b' + re.escape(stem) + r'\b', rec_lower):
+            if re.search(r'\b' + re.escape(stem) + r'\b', rec_clean):
                 return True
         elif not term.endswith('s'):
             plural = term + 's'
-            if re.search(r'\b' + re.escape(plural) + r'\b', rec_lower):
+            if re.search(r'\b' + re.escape(plural) + r'\b', rec_clean):
                 return True
                 
     return False
@@ -360,6 +372,33 @@ class RecommendationEngine:
                 # Heavily reward recipes you can make right now
                 raw_score = (0.30 * basket_coverage) + (0.70 * core_precision) - (penalty * 1.5)
 
+            # --- 1. Hero Ingredient & Dish Title Match Boost ---
+            # If the user provides a major base/hero ingredient (e.g. 'noodles', 'pasta', 'paneer', 'biryani', 'chicken')
+            # and the recipe title specifically features that hero ingredient, award a strong culinary relevance boost!
+            title_lower = recipe.name.lower()
+            hero_boost = 0.0
+            for u in cleaned_available:
+                u_syns = get_synonyms(u)
+                for syn in u_syns:
+                    if len(syn) >= 4 and re.search(r'\b' + re.escape(syn) + r'\b', title_lower):
+                        hero_boost = 0.15  # +15% boost for title-featured dish match!
+                        break
+                if hero_boost > 0:
+                    break
+            raw_score += hero_boost
+
+            # --- 2. Missing Base / Pastry Wrapper Penalty ---
+            # If a recipe is a wrapped snack (samosa, momo, spring roll, kachori, puff pastry, pie)
+            # but the user has NO flour/dough in their basket, heavily penalize it!
+            # You cannot make samosas with just vegetables and noodles.
+            if any(wrap in title_lower for wrap in ['samosa', 'momo', 'spring roll', 'kachori', 'puff pastry']):
+                has_flour = any(
+                    matches_ingredient(a, 'flour') or matches_ingredient(a, 'maida') or matches_ingredient(a, 'wheat flour')
+                    for a in cleaned_available
+                )
+                if not has_flour:
+                    raw_score -= 0.25  # -25% penalty for missing the essential outer crust/wrapper
+
             # Small adjustments for popularity & rating
             popularity_boost = min(recipe.popularity / 2000.0, 0.03)
             rating_boost = min(recipe.rating / 50.0, 0.03)
@@ -388,21 +427,21 @@ class RecommendationEngine:
 
         # Stage 3: Sort candidates based on ranking mode
         if ranking_mode == "basket_use":
-            # Prioritize recipes utilizing the most user ingredients, then least missing core, then score
+            # Prioritize overall score (incorporating hero match & penalties), then used ingredients, then least missing
             scored_candidates.sort(
                 key=lambda x: (
+                    -x["score"],
                     -len(x["used_ingredients"]),
                     len(x["missing_core"]),
-                    -x["score"]
                 )
             )
         else:  # ready_to_cook
-            # Prioritize recipes with 0-1 missing items, then basket utilization, then score
+            # Prioritize recipes with 0-1 missing items, then score, then basket utilization
             scored_candidates.sort(
                 key=lambda x: (
                     len(x["missing_core"]),
+                    -x["score"],
                     -len(x["used_ingredients"]),
-                    -x["score"]
                 )
             )
 
