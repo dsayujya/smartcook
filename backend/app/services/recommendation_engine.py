@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, select, or_
 from app.models.domain import Recipe, RecipeIngredient, Ingredient
 from app.schemas.schemas import RecipeRecommendation, Recipe as RecipeSchema, RecipeIngredientDetail, Ingredient as IngredientSchema
+from app.services.image_resolver import get_reliable_image_url
 
 try:
     from sentence_transformers import SentenceTransformer, util
@@ -425,7 +426,7 @@ class RecommendationEngine:
                 name=recipe.name,
                 description=recipe.description,
                 instructions=recipe.instructions,
-                image_url=recipe.image_url,
+                image_url=get_reliable_image_url(recipe.name, recipe.cuisine, recipe.meal_type, recipe.image_url),
                 cuisine=recipe.cuisine,
                 difficulty=recipe.difficulty,
                 prep_time=recipe.prep_time,

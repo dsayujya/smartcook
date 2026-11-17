@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from typing import List, Optional
+from app.services.image_resolver import get_reliable_image_url
 
 class UserBase(BaseModel):
     email: str
@@ -74,6 +75,16 @@ class RecipeBase(BaseModel):
     popularity: int = 0
     source: Optional[str] = "seed"
     meal_type: Optional[str] = "savoury"
+
+    @model_validator(mode='after')
+    def resolve_image(self) -> 'RecipeBase':
+        self.image_url = get_reliable_image_url(
+            recipe_name=self.name,
+            cuisine=self.cuisine,
+            meal_type=self.meal_type,
+            raw_image_url=self.image_url
+        )
+        return self
 
 class RecipeIngredientDetail(BaseModel):
     ingredient: Ingredient
